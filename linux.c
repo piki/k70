@@ -339,6 +339,23 @@ static const char *rows[7] = {
   "4 16 28           52           88 100 112 90      114 126 138  128    140",
 };
 
+static const struct { const char *name, *values; } keysets[] = {
+  { "function keys", "13 25 37 49   61 73 85 97   109 121 133 7" },
+  { "numbers", "12 24 36 48 60 72 84 96 108 120" },
+  { "letters", "15 27 39 51 63 75 87 99 111 123   14 26 38 50 62 74 86 98 110    29 41 53 65 77 89 101" },
+  { "arrow keys", "102 114 126 138" },
+  { "keypad", "81 93 105 117   8 20 32 129   56 68 80   92 104 116 141   128 140" },
+};
+
+void set_keys(const char *keylist, struct onekey clr, keymap *map) {
+  char *dup = strdup(keylist);
+  for (const char *p=strtok(dup, " "); p; p=strtok(NULL, " ")) {
+    int code = atoi(p);
+    (*map)[code] = clr;
+  }
+  free(dup);
+}
+
 void make_rainbow(keymap *map) {
   bzero(map, sizeof(*map));
   struct onekey row_colors[7] = {
@@ -351,13 +368,24 @@ void make_rainbow(keymap *map) {
     { .r=7, .g=0, .b=7 },
   };
   for (int i=0; i<7; i++) {
-    char *dup = strdup(rows[i]);
-    for (const char *p=strtok(dup, " "); p; p=strtok(NULL, " ")) {
-      int code = atoi(p);
-      (*map)[code] = row_colors[i];
-    }
-    free(dup);
+    set_keys(rows[i], row_colors[i], map);
   }
+}
+
+void make_sunset(keymap *map) {
+  bzero(map, sizeof(*map));
+  struct onekey blue = { .r=0, .g=0, .b=5 };
+  struct onekey red = { .r=6, .g=0, .b=0 };
+  struct onekey orange = { .r=6, .g=4, .b=0 };
+  struct onekey yellow = { .r=6, .g=6, .b=0 };
+  for (int i=0; i<144; i++) {
+    (*map)[i] = blue;
+  }
+
+  set_keys(keysets[1].values, orange, map);
+  set_keys(keysets[2].values, red, map);
+  set_keys(keysets[3].values, yellow, map);
+  set_keys(keysets[4].values, orange, map);
 }
 
 int main(int argc, char **argv) {
@@ -373,7 +401,8 @@ int main(int argc, char **argv) {
   int keyno = argc > 1 ? atoi(argv[1]) : 0;
 
   bzero(&map, sizeof(map));
-  make_rainbow(&map);
+  //make_rainbow(&map);
+  make_sunset(&map);
   fill_packets(&map, packets);
 
   usbsend(kbd, packets[0]);
