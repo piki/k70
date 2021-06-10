@@ -2,6 +2,7 @@ CFLAGS=-Wall -Werror
 
 uname_S := $(shell uname -s)
 ifeq ($(uname_S),Darwin)
+LDLIBS=-framework IOKit -framework CoreFoundation -framework AppKit
 all: mac
 else
 LDLIBS=-ludev
