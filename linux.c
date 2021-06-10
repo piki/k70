@@ -9,10 +9,6 @@
 #include <sys/ioctl.h>
 #include "os.h"
 
-#define MSG_SIZE 64
-#define VENDOR 0x1b1c // Corsair
-#define PRODUCT 0x1b13 // K70
-
 static struct udev *udev;
 struct kbd {
   int fd;
