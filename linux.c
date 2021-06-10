@@ -20,7 +20,7 @@ struct kbd {
   int num_interfaces;
 };
 
-int match_device(struct udev_device *dev) {
+static int match_device(struct udev_device *dev) {
   const char* vendor = udev_device_get_sysattr_value(dev, "idVendor");
   const char* product = udev_device_get_sysattr_value(dev, "idProduct");
   if (vendor == NULL || product == NULL)
@@ -37,7 +37,7 @@ int match_device(struct udev_device *dev) {
   return vid == VENDOR && pid == PRODUCT;
 }
 
-struct kbd *usbopen_dev(struct udev_device *dev) {
+static struct kbd *usbopen_dev(struct udev_device *dev) {
   const char* path = udev_device_get_devnode(dev);
   const char* syspath = udev_device_get_syspath(dev);
   if(!path || !syspath || path[0] == 0 || syspath[0] == 0){
