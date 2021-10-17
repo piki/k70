@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -372,6 +373,57 @@ void make_rainbow(keymap *map) {
   }
 }
 
+void make_diagonal_rainbow(keymap *map) {
+  bzero(map, sizeof(*map));
+  struct onekey white = {
+    .r=7, .g=7, .b=7
+  };
+  struct onekey row_colors[] = {
+    { .r=7, .g=0, .b=0 },  // red
+    { .r=7, .g=1, .b=0 },
+    { .r=7, .g=2, .b=0 },
+    { .r=7, .g=3, .b=0 },  // orange
+    { .r=7, .g=4, .b=0 },
+    { .r=7, .g=5, .b=0 },
+    { .r=7, .g=6, .b=0 },
+    { .r=7, .g=7, .b=0 },  // yellow
+    { .r=5, .g=7, .b=0 },
+    { .r=3, .g=7, .b=0 },
+    { .r=1, .g=7, .b=0 },
+    { .r=0, .g=7, .b=0 },  // green
+    { .r=0, .g=5, .b=1 },
+    { .r=0, .g=3, .b=3 },
+    { .r=0, .g=1, .b=5 },
+    { .r=0, .g=0, .b=7 },  // blue
+    { .r=1, .g=0, .b=7 },
+    { .r=3, .g=0, .b=7 },
+    { .r=5, .g=0, .b=7 },
+    { .r=7, .g=0, .b=7 },  // purple
+  };
+  const int ncolors = sizeof(row_colors)/sizeof(row_colors[0]);
+  set_keys(rows[0], white, map);  // media keys <- white
+  int max_score = 0;
+  for (int i=1; i<7; i++) {
+    for (int j=0; rows[i][j]; ) {
+      while (isspace(rows[i][j])) j++;
+      int score = 3*i + j;
+      if (score > max_score) max_score = score;
+      while (rows[i][j] && !isspace(rows[i][j])) j++;
+    }
+  }
+
+  for (int i=1; i<7; i++) {
+    for (int j=0; rows[i][j]; ) {
+      while (isspace(rows[i][j])) j++;
+      int keyno = atoi(&rows[i][j]);
+      int score = 3*i + j;
+      int color = score*ncolors/(max_score+1);
+      (*map)[keyno] = row_colors[color];
+      while (rows[i][j] && !isspace(rows[i][j])) j++;
+    }
+  }
+}
+
 void make_sunset(keymap *map) {
   bzero(map, sizeof(*map));
   struct onekey blue = { .r=0, .g=0, .b=5 };
@@ -401,6 +453,8 @@ int main(int argc, char **argv) {
 
   if (!strcmp(argv[1], "rainbow"))
     make_rainbow(&map);
+  if (!strcmp(argv[1], "drainbow"))
+    make_diagonal_rainbow(&map);
   else if (!strcmp(argv[1], "sunset"))
     make_sunset(&map);
   else
