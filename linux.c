@@ -388,21 +388,32 @@ void make_sunset(keymap *map) {
   set_keys(keysets[4].values, orange, map);
 }
 
+void usage(const char *prog) {
+  printf("Usage:\n  %s {rainbow|drainbow|sunset}\n", prog);
+  exit(1);
+}
+
 int main(int argc, char **argv) {
+  keymap map;
+  bzero(&map, sizeof(map));
+  if (argc != 2)
+    usage(argv[0]);
+
+  if (!strcmp(argv[1], "rainbow"))
+    make_rainbow(&map);
+  else if (!strcmp(argv[1], "sunset"))
+    make_sunset(&map);
+  else
+    usage(argv[0]);
+
   struct kbd *kbd = usbopen();
   if (!kbd) {
     usbclose(NULL);
     return 1;
   }
 
-  keymap map;
   unsigned char packets[5][64];
 
-  int keyno = argc > 1 ? atoi(argv[1]) : 0;
-
-  bzero(&map, sizeof(map));
-  //make_rainbow(&map);
-  make_sunset(&map);
   fill_packets(&map, packets);
 
   usbsend(kbd, packets[0]);
@@ -410,8 +421,6 @@ int main(int argc, char **argv) {
   usbsend(kbd, packets[2]);
   usbsend(kbd, packets[3]);
   usbsend(kbd, packets[4]);
-
-  printf("keyno=%d\n", keyno);
 
   usbclose(kbd);
 
