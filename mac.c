@@ -10,6 +10,7 @@
 #include "os.h"
 
 struct kbd {
+	usb_dev_t handle;
 };
 
 // globals
@@ -75,15 +76,100 @@ void usbsend(struct kbd *kbd, const void *data) {
 }
 
 static struct kbd *add_usb(usb_dev_t handle, io_object_t **rm_notify) {
+    int iface_count = 0, iface_success = 0;
+    io_iterator_t iterator = 0;
+    io_service_t iface = 0;
+    // Get device properties
     UInt16 idvendor, idproduct;
     UInt32 location;
     (*handle)->GetDeviceVendor(handle, &idvendor);
     (*handle)->GetDeviceProduct(handle, &idproduct);
     (*handle)->GetLocationID(handle, &location);
-		printf("got a USB device: vendor=%x product=%x location=%x\n", idvendor, idproduct, location);
 
-    // WRITEME: borrow from add_usb
+    struct kbd *kb = (struct kbd*)malloc(sizeof(struct kbd));
+    kb->handle = handle;
 
+    // Read the serial number and name (if not done yet)
+    if(!kb->serial[0] && !kb->name[0]){
+        UInt8 serial_idx, product_idx;
+        if((*handle)->USBGetSerialNumberStringIndex(handle, &serial_idx) == kIOReturnSuccess)
+            usbgetstr(handle, serial_idx, kb->serial, SERIAL_LEN);
+        if((*handle)->USBGetProductStringIndex(handle, &product_idx) == kIOReturnSuccess)
+            usbgetstr(handle, product_idx, kb->name, KB_NAME_LEN);
+        ckb_info("Connecting %s at %s%d", keyboard[index].name, devpath, index);
+    }
+
+    // Iterate through the USB interfaces. Most of these will fail to open because they're already grabbed by the HID system.
+    if(seize_wait(location))
+        ckb_warn("seize_wait failed, connecting anyway...");
+    IOUSBFindInterfaceRequest interfaceRequest;
+    interfaceRequest.bInterfaceClass = kIOUSBFindInterfaceDontCare;
+    interfaceRequest.bInterfaceSubClass = kIOUSBFindInterfaceDontCare;
+    interfaceRequest.bInterfaceProtocol = kIOUSBFindInterfaceDontCare;
+    interfaceRequest.bAlternateSetting = kIOUSBFindInterfaceDontCare;
+    (*handle)->CreateInterfaceIterator(handle, &interfaceRequest, &iterator);
+    // Count the total number of interfaces as well as the number successfully opened.
+    while((iface = IOIteratorNext(iterator)) != 0){
+        if(iface_count >= IFACE_MAX){
+            ckb_warn("Too many interfaces. Dropping the rest.");
+            IOObjectRelease(iface);
+            break;
+        }
+        // Get device interface
+        IOCFPlugInInterface** plugin = 0;
+        SInt32 score = 0;
+        kern_return_t err;
+        wait_loop(err, IOCreatePlugInInterfaceForService(iface, kIOUSBInterfaceUserClientTypeID, kIOCFPlugInInterfaceID, &plugin, &score));
+        if(err != kIOReturnSuccess){
+            ckb_err("Failed to create interface plugin: %x", err);
+            goto release;
+        }
+        usb_iface_t if_handle;
+        wait_loop(err, (*plugin)->QueryInterface(plugin, CFUUIDGetUUIDBytes(kIOUSBInterfaceInterfaceID183), (LPVOID)&if_handle));
+        if(err != kIOReturnSuccess){
+            ckb_err("QueryInterface failed: %x", err);
+            goto release;
+        }
+        // Plugin is no longer needed
+        IODestroyPlugInInterface(plugin);
+
+        // Get location ID in case it's different from the main USB
+        (*if_handle)->GetLocationID(if_handle, kb->location_id + iface_count + 1);
+        // Try to open the interface. If it succeeds, add it to the device's interface list.
+        err = (*if_handle)->USBInterfaceOpenSeize(if_handle);   // no wait_loop here because this is expected to fail
+        if(err == kIOReturnSuccess){
+            kb->ifusb[iface_count] = if_handle;
+            ckb_info("ckb%d: Adding USB handle with id %i", index, iface_count);
+            iface_success++;
+            // Register for removal notification
+            IOServiceAddInterestNotification(notify, iface, kIOGeneralInterest, remove_device, kb, kb->rm_notify + 1 + iface_count);
+        } else {
+            kb->ifusb[iface_count] = 0;
+            (*if_handle)->Release(if_handle);
+        }
+
+release:
+        iface_count++;
+        IOObjectRelease(iface);
+    }
+    if(iface_count == 0){
+        // This shouldn't happen, but if it does, assume EP count based on what the device is supposed to have
+        iface_count = (HAS_FEATURES(kb, FEAT_RGB) ? 4 : 3);
+        ckb_warn("Unable to count endpoints, assuming %d...", iface_count);
+    }
+    kb->epcount = iface_count;
+    kb->epcount_usb = iface_success;
+
+    // If the HID handles are already opened, set up the device
+    if(HAS_ALL_HANDLES(kb))
+        setupusb(kb);
+    else
+        queued_mutex_unlock(devmutex + index);
+    *rm_notify = kb->rm_notify;
+    return kb;
+
+error:
+    queued_mutex_unlock(devmutex + index);
     return NULL;
 }
 
