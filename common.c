@@ -327,7 +327,7 @@ int main(int argc, char **argv) {
 
   if (!strcmp(argv[1], "rainbow"))
     make_rainbow(&map);
-  if (!strcmp(argv[1], "drainbow"))
+  else if (!strcmp(argv[1], "drainbow"))
     make_diagonal_rainbow(&map);
   else if (!strcmp(argv[1], "sunset"))
     make_sunset(&map);
