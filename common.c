@@ -296,8 +296,26 @@ void make_sunset(keymap *map) {
   set_keys(keysets[4].values, orange, map);
 }
 
+void make_planetscale(keymap *map) {
+  bzero(map, sizeof(*map));
+  struct onekey white = { .r=6, .g=6, .b=6 };
+  struct onekey orange = { .r=6, .g=4, .b=0 };
+  struct onekey black = { .r=0, .g=0, .b=0 };
+  for (int i=0; i<144; i++) {
+    (*map)[i] = black;
+  }
+  int logo_keys[] = { 24, 36, 48,   15, 27, 39, 51,   14, 26, 38, 50,   29, 41, 53 };
+
+  set_keys(keysets[0].values, orange, map);
+  set_keys(keysets[3].values, orange, map);
+  set_keys(keysets[4].values, orange, map);
+  for (int i=0; i<sizeof(logo_keys)/sizeof(logo_keys[0]); i++) {
+    (*map)[logo_keys[i]] = white;
+  }
+}
+
 void usage(const char *prog) {
-  printf("Usage:\n  %s {rainbow|drainbow|sunset}\n", prog);
+  printf("Usage:\n  %s {rainbow|drainbow|sunset|planetscale}\n", prog);
   exit(1);
 }
 
@@ -313,6 +331,8 @@ int main(int argc, char **argv) {
     make_diagonal_rainbow(&map);
   else if (!strcmp(argv[1], "sunset"))
     make_sunset(&map);
+  else if (!strcmp(argv[1], "planetscale"))
+    make_planetscale(&map);
   else
     usage(argv[0]);
 
