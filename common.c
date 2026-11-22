@@ -23,7 +23,7 @@ static unsigned char packets[5][64] = {
 void fill_packets(keymap *map, unsigned char packets[5][64]) {
   int i;
   for (i=0; i<5; i++)
-    bzero(packets[i], 64);
+    memset(packets[i], 0, 64);
 
   memcpy(packets[0], "\x7f\x01\x3c\0", 4);
   memcpy(packets[1], "\x7f\x02\x3c\0", 4);
@@ -214,7 +214,7 @@ void set_keys(const char *keylist, struct onekey clr, keymap *map) {
 }
 
 void make_rainbow(keymap *map) {
-  bzero(map, sizeof(*map));
+  memset(map, 0, sizeof(*map));
   struct onekey row_colors[7] = {
     { .r=7, .g=7, .b=7 },
     { .r=7, .g=0, .b=0 },
@@ -230,7 +230,7 @@ void make_rainbow(keymap *map) {
 }
 
 void make_diagonal_rainbow(keymap *map) {
-  bzero(map, sizeof(*map));
+  memset(map, 0, sizeof(*map));
   struct onekey white = {
     .r=7, .g=7, .b=7
   };
@@ -281,7 +281,7 @@ void make_diagonal_rainbow(keymap *map) {
 }
 
 void make_sunset(keymap *map) {
-  bzero(map, sizeof(*map));
+  memset(map, 0, sizeof(*map));
   struct onekey blue = { .r=0, .g=0, .b=5 };
   struct onekey red = { .r=6, .g=0, .b=0 };
   struct onekey orange = { .r=6, .g=4, .b=0 };
@@ -297,7 +297,7 @@ void make_sunset(keymap *map) {
 }
 
 void make_planetscale(keymap *map) {
-  bzero(map, sizeof(*map));
+  memset(map, 0, sizeof(*map));
   struct onekey white = { .r=6, .g=6, .b=6 };
   struct onekey orange = { .r=6, .g=4, .b=0 };
   struct onekey black = { .r=0, .g=0, .b=0 };
@@ -321,7 +321,7 @@ void usage(const char *prog) {
 
 int main(int argc, char **argv) {
   keymap map;
-  bzero(&map, sizeof(map));
+  memset(&map, 0, sizeof(map));
   if (argc != 2)
     usage(argv[0]);
 
